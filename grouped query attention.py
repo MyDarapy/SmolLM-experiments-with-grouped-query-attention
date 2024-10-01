@@ -1,5 +1,5 @@
 from typing import Optional, Union, Tuple
-
+import torch
 import torch.nn.functional as F 
 from torch import Tensor, nn
 from einops import rearrange, einsum
@@ -14,7 +14,8 @@ def grouped_query_attention(
     group_query: bool = True,
     need_weights: bool = False,
     average_attn_weights: bool = False
-)
+    
+    )
 
     ''' This function provides support for both multi-head 
     scaled dot product attention and grouped query scaled dot product attention 
@@ -28,15 +29,15 @@ def grouped_query_attention(
     n: sequence_length (query)
     s: sequence length (key/value) why do we have to have different notations?
     h: number of heads
-    d: dimension of query, key and value vectors 
+    d: dimension of query, key and value vectors '''
     
     
-    '''
-    ''' Check to ensure attention knows how to handle computation correctly
-    if (masked_attention is not None) and (is_casual is not None):
-        raise ValueError('One of \'mask\' or \'is_casual\' must be None, both is provided') '''
+    
+    # Check to ensure attention knows how to handle computation correctly
+    #if (masked_attention is not None) and (is_casual is not None):
+        #raise ValueError('One of \'mask\' or \'is_casual\' must be None, both is provided')
 
-    elif not query.ndim == value.ndim == key.ndim == 4:
+    if not query.ndim == value.ndim == key.ndim == 4:
         raise ValueError (
             'Expected q, k, v to have 4 dimensions got dimensions f"query: {query.shape}, f"key: {key.shape}, f"value:{value.shape}')
 
@@ -66,7 +67,7 @@ def grouped_query_attention(
 
     query = rearrange(query, 'b (h g) n d) -> b h g n d', g = num_of_head_groups)
     attention_scores = einsum(query, key, 'b h g n d, b h s d -> b h g n s')
-    scaled_ attention_matrix= attention_scores / scale
+    scaled_attention_matrix= attention_scores / scale
 
     if is_casual:
             mask = torch.torch.ones((bq, nq, sk), device=query.device, dtype=torch.bool).tril_()
@@ -76,12 +77,12 @@ def grouped_query_attention(
             if mask.ndim == 3:
                 mask= rearrange()
 
-        scaled_attention_matrix.masked_fill_(~mask, float('-inf')) 
+    scaled_attention_matrix.masked_fill_(~mask, float('-inf')) 
    
     attention_weights = F.softmax(scaled_attention_matrix, dim=-1)
 
-    if dropout > 0:
-        attention_weights = nn.Dropout(attention_weights, p=dropout)
+    if dropout_probability> 0:
+        attention_weights = nn.Dropout(attention_weights, p=dropout_probability)
 
     output = einsum(attention_weights, value, 'b g h n s, b h s d -> b g h n d')
 
@@ -91,7 +92,7 @@ def grouped_query_attention(
     if need_weights:
         attention_weights = rearrange(attention_weights, 'b g h n s -> b n s (h g)')
 
-        if average_attention_weights:
+        if average_attn_weights:
             attention_weights = attention_weights.mean(dim=1)
 
     return output, attention_weights
@@ -118,12 +119,14 @@ class MultiHeadGroupedQueryAttention(nn.Module):
      
         if self.query_heads % kv_matrix_heads != 0:
             raise ValueError('query_heads must be divisible by number of kv heads')
+        
         elif (embed_dim % query_heads != 0) or (embed_dim % kv_matrix_heads != 0):
             raise ValueError(
                 'embedding_dim f"{self.embed_dim} must be divisible by query_heads f"{self.query_heads} and key/value heads f"{self.kv_matrix_heads}')
     
-        head_dim = self.embed_dim // self.query
-        kv_embed_dim = embed_dim // query_heads * kv_heads
+        
+        
+        kv_embed_dim = embed_dim // query_heads * kv_matrix_heads
 
         self.q_proj = nn.Linear(embed_dim, embed_dim, bias= False, device=torch.device, dtype=torch.dtype)
         self.k_proj = nn.Linear(embed_dim, kv_embed_dim, bias= False, device=torch.device, dtype=torch.dtype)
@@ -147,13 +150,13 @@ class MultiHeadGroupedQueryAttention(nn.Module):
         v = rearrange(v, 'b n (h d) -> b n h d', h=self.kv_matrix_heads)
 
         output_x, attention_weights = grouped_query_attention(
-            q, k, v, is_casual=is_casual, dropout_probability= 0.1, group_query= True, need_weights = True, 
+            q, k, v, is_casual= True, dropout_probability= 0.1, group_query= True, need_weights = True, 
             average_attn_weights= True)
 
-        Contatenate back into a single head vector
+        #Contatenate back into a single head vector
         output_x= rearrange(output_x, "b n h d -> b n (h d)")
 
         output_x = self.layernorm1(output_x)
-        output_x = out_proj(output_x)
+        output_x = self.out_proj(output_x)
 
         return output_x, attention_weights
