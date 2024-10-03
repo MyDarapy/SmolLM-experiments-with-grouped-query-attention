@@ -4,18 +4,31 @@ import torch.nn.functional as F
 from torch import Tensor, nn
 from einops import rearrange, einsum
 
+context_length = 512
+embed_dim = 896
+query_heads = 16
+kv_matrix_heads = 3
+dropout_probability = 0.1
+hidden_size = hidden_size = embed_size * 3
+batch_size = 6
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+n_blocks = 8
+eval_iters = 200
+evaluation_intervals = 200
+vocab_size = 15_000
+
 def grouped_query_attention(
     query: Tensor,
     key: Tensor,
     value: Tensor,
     is_casual: bool = None, 
     #masked_attention: bool = None
-    dropout_probability: float = 0.0,
+    dropout_probability: float = 0.1,
     group_query: bool = True,
     need_weights: bool = False,
     average_attn_weights: bool = False
     
-    )
+    ):
 
     ''' This function provides support for both multi-head 
     scaled dot product attention and grouped query scaled dot product attention 

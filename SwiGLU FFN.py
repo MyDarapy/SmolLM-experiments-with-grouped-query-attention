@@ -1,6 +1,6 @@
 import torch 
 import torch.nn as nn
-
+hidden_size = embed_size * 3
 class SwiMLP(nn.Module):
     def __init__(self, embed_dim, hidden_size, dropout_probability=0.1):
         super(SwiMLP, self).__init__()

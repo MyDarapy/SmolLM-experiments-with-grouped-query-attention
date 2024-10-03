@@ -4,6 +4,20 @@ from Embeddings import  EmbeddingLayer
 import torch 
 import torch.nn as nn
 
+# Model Hyperparameters
+context_length = 512
+embed_dim = 896
+query_heads = 16
+kv_matrix_heads = 3
+dropout_probability = 0.1
+hidden_size = hidden_size = embed_size * 3
+batch_size = 6
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+n_blocks = 8
+eval_iters = 200
+evaluation_intervals = 200
+vocab_size = 15_000
+
 class Block(nn.Module):
     def __init__(self, embed_dim, query_heads, kv_matrix_heads, dropout_probability=0.1):
         super(Block, self).__init__()
@@ -22,9 +36,9 @@ class Block(nn.Module):
 
 
 
-class Transformer(nn.Module):
+class SmolLM(nn.Module):
     def __init__(self, vocab_size, n_blocks, block_size):
-        super(Transformer, self).__init__()
+        super(SmolLM, self).__init__()
         self.embeddings = EmbeddingLayer(vocab_size, embed_dim, block_size)
         self.position_token = EmbeddingLayer(vocab_size, embed_dim, block_size)
         self.block = nn.Sequential([*Block(embed_dim, query_heads, kv_matrix_heads, dropout_probability=0.1) for _ in range(n_blocks)])
