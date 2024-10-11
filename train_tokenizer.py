@@ -1,15 +1,12 @@
 from tokenizers import ByteLevelBPETokenizer
 import json
 
-
-data_files = 
-
 # Initialize a tokenizer
-def tokenizer(data_files, saving_filepath, vocab_size, min_frequency):
+def tokenizer_trainer(data_files, saving_directory, vocab_size):
     tokenizer = ByteLevelBPETokenizer()
 
     # Train the tokenizer on your dataset
-    tokenizer.train(files = data_files, vocab_size, min_frequency, special_tokens=[
+    tokenizer.train(files = data_files, vocab_size=vocab_size, min_frequency=2, special_tokens=[
     "<s>",
     "<pad>",
     "</s>",
@@ -18,8 +15,10 @@ def tokenizer(data_files, saving_filepath, vocab_size, min_frequency):
     ])
 
     # Save the trained tokenizer
-    tokenizer.save_model('/content/drive/MyDrive/BPEtokenizer')
+    tokenizer.save_model(saving_directory)
     print('tokenizer successfully trained')
+
+    return tokenizer
 
 
 #Get the vocabulary created by the tokenizer

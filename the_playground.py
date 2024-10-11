@@ -3,7 +3,7 @@ import torch.nn as nn
 import wandb 
 
 from preprocessing import read_file_path, tokenize_map_ids, TensorConverter 
-from transformer import SmolLM
+from SmolLM import SmolLM
 from train_tokenizer import tokenizer, get_vocab
 
 def split_data(data, train_data_size):
